@@ -1,12 +1,13 @@
 '''text_dataset_word.py
 Functions to create, organize, and preprocess a word level text dataset
-YOUR NAMES HERE
+Samuel Atilano and Alex Solano
 CS 443: Bio-inspired Machine Learning
 Project 3: Word Embeddings and Self-Organizing Maps (SOMs)
 '''
 import pickle
 import pandas as pd
 import tensorflow as tf
+import re
 
 from text_util import clean_review, tokenize_words
 
@@ -52,35 +53,43 @@ class WordLevelDataset:
 
     def get_filepath(self):
         '''Get the filepath to the dataset .CSV data file.'''
-        pass
+        
+        return self.file_path
 
     def get_reviews(self):
         '''Get the raw text reviews represented as strings.'''
-        pass
+        
+        return self.reviews_raw
 
     def get_corpus(self):
         '''Get the corpus, a list of lists organized: sentences across reviews/words in each sentence'''
-        pass
+        
+        return self.corpus
 
     def get_context_words(self):
         '''Get the (N,) int-coded context word tensor for context words across the corpus.'''
-        pass
+        
+        return self.context_words_int
 
     def get_target_words(self):
         '''Get the (N,) int-coded target word tensor for target words across the corpus.'''
-        pass
+        
+        return self.target_words_int
 
     def get_word2ind_map(self):
         '''Get dictionary that looks up a word index (int) by its string.'''
-        pass
+        
+        return self.word2ind_map
 
     def get_ind2word_map(self):
         '''Get dictionary that uses a word int code to look up its word string'''
-        pass
+        
+        return self.ind2word_map
 
     def get_vocab(self):
         '''Get the vocabulary, the unique list of words in the corpus'''
-        pass
+        
+        return self.vocab
 
     def save_vocab(self, full_path='export/vocab.pkl'):
         '''Saves the vocabulary to disk to quick retrieval later without re-parsing the whole text dataset.
@@ -151,7 +160,22 @@ class WordLevelDataset:
         Python list of str. len=N_reviews
             Retrieved reviews, with each whole review represented as a single string (see example above).
         '''
-        pass
+        
+        #Loading dataset
+        file_path = self.get_filepath()
+        data_df = pd.read_csv(file_path)
+
+        #turning review column into list of N_reviews size
+        review_list = []
+        if N_reviews == -1:
+            review_list = data_df['review'].tolist()
+        else:
+            review_list = data_df['review'].head(N_reviews).tolist()
+        
+        #Assigning instance variable
+        self.reviews_raw = review_list
+
+        return review_list
 
     def make_corpus(self, reviews, min_sent_size=2):
         '''Make the text corpus of the IMDb dataset.
@@ -180,11 +204,34 @@ class WordLevelDataset:
 
         TODO:
         1. Load in the requested number of reviews and ratings.
-        2. Split each review into sentences based on periods.
+        2. Split each review into sentences based on periods, question marks, OR exclamation points.
         3. Tokenize the sentence into individual word strings (via provided `tokenize_words` function in `text_util.py`)
         4. Make sure only sentences get added to the corpus that are AT LEAST as long as the min length.
         '''
-        pass
+        
+        corpus = []
+        #Grabbing individual review from reviews
+        for review in reviews:
+            #Splitting that review into list of sentences separated by period
+            sentences = re.split(r'[.!?]', review)
+
+            #Loop through list of sentences
+            for sentence in sentences:
+                #Tokenizing the sentence into a list of words
+                word_strings = tokenize_words(sentence)
+
+                #Appending sentence/list of words to corpus if size is atleast min_sent_size
+                if len(word_strings) >= min_sent_size:
+                    corpus.append(word_strings)
+
+        #Assigning Instance Variable
+        self.corpus = corpus
+
+        return corpus
+    
+
+
+    
 
     def make_vocabulary(self, corpus):
         '''Define the vocabulary in the corpus (unique words). Finds and returns a list of the unique words in the
@@ -200,7 +247,20 @@ class WordLevelDataset:
         Python list of str. len=vocab_sz.
             List of unique words in the corpus.
         '''
-        pass
+        
+        unique_words = []
+        for sentence in corpus:
+            for word in sentence:
+                if word not in unique_words:
+                    unique_words.append(word)
+                else:
+                    continue
+        
+        #Assigning Instance Variable
+        self.vocab = unique_words
+
+        return unique_words
+
 
     def make_word2ind_mapping(self, vocab):
         '''Create dictionary that looks up a word index (int) by its string.
@@ -215,7 +275,17 @@ class WordLevelDataset:
         -----------
         Python dictionary. key,value pairs: str,int
         '''
-        pass
+
+        word2ind_dict = {}
+        int_code = 0
+        for word in vocab:
+            word2ind_dict[word] = int_code
+            int_code += 1
+
+        #Assigning dictionary to instance var
+        self.word2ind_map = word2ind_dict
+
+        return word2ind_dict
 
     def make_ind2word_mapping(self, vocab):
         '''Create dictionary that uses a word int code to look up its word string
@@ -230,7 +300,17 @@ class WordLevelDataset:
         -----------
         Python dictionary with key,value pairs: int,str
         '''
-        pass
+        
+        ind2word_dict = {}
+        int_code = 0
+        for word in vocab:
+            ind2word_dict[int_code] = word
+            int_code += 1
+
+        #Assigning dictionary to instance var
+        self.ind2word_map = ind2word_dict
+
+        return ind2word_dict
 
     def make_target_context_word_lists(self, corpus, word2ind, context_win_sz=2):
         '''Make the target word array ("training samples") and context word array ("classes").
@@ -272,6 +352,39 @@ class WordLevelDataset:
         '''
         target_words_int = []
         context_words_int = []
+
+        #Looping through each sentence
+        for sentence in corpus:
+            #Looping through each word in the sentence
+            for word_index in range(len(sentence)):
+    
+                target_word = sentence[word_index]
+
+                #Creating context window range
+                start = max(0, word_index - context_win_sz)
+                end = min(len(sentence), word_index + context_win_sz + 1)
+
+                #Looping through context and excluding the word itself
+                for i in range(start, end):
+                    if sentence[i] == target_word: #Looking at the target word
+                        continue
+                    else:
+                        context_word = sentence[i]
+
+                        #Grab word2ind ints and append to list
+                        target_ind = word2ind[target_word]
+                        context_ind = word2ind[context_word]
+
+                        target_words_int.append(target_ind)
+                        context_words_int.append(context_ind)
+                    
+        #Converting lists into tensors
+        target_words_int = tf.convert_to_tensor(target_words_int, dtype=tf.int32)
+        context_words_int = tf.convert_to_tensor(context_words_int, dtype=tf.int32)
+
+        #Assigning Instance Variables
+        self.target_words_int = target_words_int
+        self.context_words_int = context_words_int
 
         return target_words_int, context_words_int
 
