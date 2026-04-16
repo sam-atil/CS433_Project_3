@@ -366,7 +366,7 @@ class WordLevelDataset:
 
                 #Looping through context and excluding the word itself
                 for i in range(start, end):
-                    if sentence[i] == target_word: #Looking at the target word
+                    if i == word_index: #Looking at the target word
                         continue
                     else:
                         context_word = sentence[i]
