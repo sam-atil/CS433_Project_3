@@ -1,6 +1,6 @@
 '''skipgram.py
 The Skipgram neural network
-YOUR NAMES HERE
+Samuel Atilano and Alex Solano
 CS 443: Bio-Inspired Machine Learning
 Project 3: Word Embeddings and Self-Organizing Maps (SOMs)
 '''
@@ -43,7 +43,19 @@ class Skipgram(network.DeepNetwork):
         1. Call the superclass constructor to pass along parameters that `DeepNetwork` has in common.
         2. Build out and configure the Skipgram network.
         '''
-        pass
+        super().__init__(input_feats_shape)
+        self.C = C
+        self.embedding_dim = embedding_dim
+
+        self.layers = []
+
+        embedding_layer = Embedding('Embedding Layer', embedding_dim, prev_layer_or_block=None)
+        self.layers.append(embedding_layer)
+
+        dense_layer = Dense('Dense Layer', C, 'softmax', prev_layer_or_block=embedding_layer, wt_init='he')
+        self.layers.append(dense_layer)
+
+        self.output_layer = dense_layer
 
     def __call__(self, x):
         '''Forward pass through the Skipgram with the data samples `x`.
@@ -58,8 +70,12 @@ class Skipgram(network.DeepNetwork):
         tf.float32 tensor. shape=(B, C).
             Activations produced by the output layer to the data.
         '''
-        pass
-
+        net_act = x
+        for layer in self.layers:
+            net_act = layer(net_act)
+        
+        return net_act
+        
     def fit(self, x, y, batch_size=256, epochs=10, print_every=1, linear_lr_decay=True, linear_lr_min_lr=1e-5,
             verbose=True):
         '''Trains Skipgram on pairs of context word indices (samples `x`) and target word indices (labels `y`).
