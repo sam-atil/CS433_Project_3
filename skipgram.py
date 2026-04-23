@@ -120,9 +120,43 @@ class Skipgram(network.DeepNetwork):
         '''
         N = len(x)
         mini_batches = N // batch_size
+        num_steps = epochs * mini_batches
 
         # Define loss tracking containers
         train_loss_hist = []
+
+        #Training Mode
+        self.set_layer_training_mode(True)
+
+        rng = np.random.default_rng(seed=0)
+        iterations = (len(x) // batch_size)
+
+        #Linear Decay Variables
+        t = 0
+        num_steps = epochs * mini_batches
+        initial_lr = self.opt.learning_rate
+
+        for e in range(epochs):
+            loss = []
+            for i in range(iterations):
+                #first minibatch with sampling
+                indices = rng.integers(0, len(x), batch_size)
+                x_batch = tf.gather(x, indices)
+                y_batch = tf.gather(y, indices)
+
+                loss.append(self.train_step(x_batch, y_batch))
+
+                if linear_lr_decay:
+                    self.lr_linear_decay(initial_lr, t, num_steps, linear_lr_min_lr)
+                t += 1
+
+                if i % print_every == 0:
+                    avg_loss = tf.reduce_mean(loss)
+                    train_loss_hist.append(avg_loss)
+
+                    if verbose:
+                        print(f"Step {t}: training_loss: {avg_loss:.4}")
+
 
         print(f'Finished training after {e+1} epochs!')
         return train_loss_hist
@@ -146,19 +180,29 @@ class Skipgram(network.DeepNetwork):
             For example, if the lr decay equation says lr should be 0.001 but if min_allowed_lr=0.01, then we actually
             set the lr to 0.01.
         '''
-        pass
+        
+        new_lr = initial_lr * (1 - ((t + 1)/num_steps))
+
+        #Check cutting off point
+        new_lr = max(new_lr, min_allowed_lr)
+
+        self.opt.learning_rate.assign(new_lr)
+
 
     def get_word_embedding(self, wordind):
         '''Given the word index `wordind` retrieve and return the corresponding embedding vector.'''
-        pass
+        embedding_layer = self.layers[0]
+        return tf.gather(embedding_layer.wts, wordind)
 
     def get_all_embeddings(self):
         '''Retrieve and return the embedding vectors for ALL words in the vocab.'''
-        pass
+        embedding_layer = self.layers[0]
+        return embedding_layer.wts
 
     def get_bias(self):
         '''Retrieve and return the embedding layer bias.'''
-        pass
+        embedding_layer = self.layers[0]
+        return embedding_layer.b
 
     def save_embeddings(self, path='export', filename='embeddings.npz'):
         '''Saves the embeddings to disk.

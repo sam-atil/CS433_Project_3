@@ -54,6 +54,10 @@ class SOM:
         self.som_grid_rows = nr
         self.som_grid_cols = nc
 
+        #Initializing Weights
+        rng = np.random.default_rng(seed=seed)
+        self.wts = rng.uniform(low = feature_range[0], high=feature_range[1], size=(self.n_rows, self.n_cols, self.num_feats))
+
     def get_wts(self):
         '''Returns the weight vector.
 
