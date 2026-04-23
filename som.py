@@ -80,7 +80,10 @@ class SOM:
 
         NOTE: For efficiency, you may not use any loops.
         '''
-        pass
+        distances = np.linalg.norm(self.wts - input_vector, axis = -1)
+        bmu_index = np.argmin(distances)
+        bmu_coord = tuple(map(int, np.unravel_index(bmu_index, shape = (self.n_rows, self.n_cols))))
+        return bmu_coord
 
     def get_nearest_wts(self, data):
         '''Find the nearest SOM wt vector to each of data sample vectors.
