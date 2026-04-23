@@ -98,7 +98,14 @@ class SOM:
 
         NOTE: A loop is fine here.
         '''
-        pass
+        nearest_wts = []
+
+        for sample_vector in data:
+            bmu_coord = self.get_bmu(sample_vector)
+            nearest_wt = self.wts[bmu_coord[0], bmu_coord[1]]
+            nearest_wts.append(nearest_wt)
+        
+        return np.array(nearest_wts)
 
     def gaussian(self, bmu_rc, sigma):
         '''Generates a "normalized" 2D Gaussian, where the max value is 1, and is centered on `bmu_rc`.
@@ -128,7 +135,11 @@ class SOM:
 
         NOTE: For efficiency, you should not use any for loops.
         '''
-        pass
+        dist = np.sqrt((self.som_grid_rows - bmu_rc[0])**2 + (self.som_grid_cols - bmu_rc[1])**2)
+
+        gaussian_wts = np.exp(-dist**2 / (2 * sigma ** 2))
+
+        return gaussian_wts
 
     def update_wts(self, input_vector, bmu_rc, lr, sigma):
         '''Applies the SOM update rule to change the BMU (and neighboring units') weights,
@@ -144,7 +155,10 @@ class SOM:
 
         NOTE: For efficiency, you should not use any loops.
         '''
-        pass
+        gauss_wt = self.gaussian(bmu_rc, sigma)
+        curr_wts = self.wts
+
+        self.wts = curr_wts + lr * gauss_wt[:, :, np.newaxis] * (input_vector - curr_wts)
 
     def decay_param(self, curr_iter, num_iters, initial_val, final_val):
         '''Takes a hyperparameter (e.g. lr, sigma) and applies a exponential time-dependent decay function.
